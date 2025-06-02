@@ -1,0 +1,2 @@
+# ahk
+auto hot key 
