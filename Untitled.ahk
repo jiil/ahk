@@ -374,7 +374,6 @@ fillout(&s){
             s.fill.visible := True
             s.line.visible := False
         }
-        s.fill.visible := s.fill.visible = False
     }
     return ! s.connector
 }
@@ -396,7 +395,6 @@ dashToggle(&s){
 }
 ^\::{
     if_(is_shape, forShape(dashToggle),ThisHotkey)
-    ;selectionType(,,forShape(dashToggle,_22() => Send(".")),_3() => Send("."))
 }
 lineWidth(up){
     f(&s){
@@ -411,11 +409,9 @@ lineWidth(up){
 }
 wheelup::{
     if_(is_shape, forShape(lineWidth(True)),"{WheelUp}")
-    ;selectionType(_0 => Send("{WheelUp}"), _1 => Send("{WheelUp}"), forShape(lineWidth(True), _22() => Send("{WheelUp}")), _3 => Send("{WheelUp}")
 }
 wheelDown::{
     if_(is_shape, forShape(lineWidth(False)),"{WheelDown}")
-    ;selectionType(_0 => send("{WheelDown}"), _1 => send("{WheelDown}"), forShape(lineWidth(False),_22() => Send("{WheelDown}")), _3 => send("{WheelDown}"))
 }
 
 MButton:: send "!hsfe" ; 도형 스포이드
