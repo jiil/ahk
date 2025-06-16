@@ -92,8 +92,33 @@ mso(str) {
 if_(exp, func, hotkey) {
     exp() ? func() : send(hotkey)
 }
-a::if_(is_none,_() => mso("ShapeRoundedRectangle"), ThisHotkey)
-t::if_(is_none,_() => mso("TextBoxInsertHorizontal"), ThisHotkey)
+a::{
+    if is_none(){
+        mso("ShapeRoundedRectangle")
+    } else if is_multiShape() {
+        getBoundfor(genShapeBefore(5))
+    } else {
+        send(ThisHotkey)
+    }
+}
+d::{
+    if is_none() {
+        mso("ShapeOval")
+    } else if is_multiShape() {
+        getBoundfor(genShapeBefore(9))
+    } else {
+        send(ThisHotkey)
+    }
+}
+t::{
+    if is_none() {
+        mso("TextBoxInsertHorizontal")
+    } else if is_multiShape() {
+        getBoundfor(genTextBoxBefore())
+    } else {
+        send(ThisHotkey)
+    }
+}
 /::{
     if is_none() {
         mso("ShapeStraightConnectorArrow")
@@ -169,38 +194,21 @@ getCenterBoundfor(boxfunc){
     boxfunc(left, right, top, bottom)
 }
 
-centerAlign(left, right, top, bottom)
-{
-    if (right - left < bottom - top ) 
-        mso("ObjectsAlignCenterHorizontalSmart")
-    else
-        mso("ObjectsAlignMiddleVerticalSmart")
+centerAlign(left, right, top, bottom) {
+    (right - left < bottom - top ) ?  mso("ObjectsAlignCenterHorizontalSmart") : mso("ObjectsAlignMiddleVerticalSmart")
 }
 
 getBoundfor(boxfunc){
-    if (sel.HasChildShapeRange){
-        for s, _ in sel.ChildShapeRange{
-            if IsSet(left){
-                left := s.left < left ? s.left : left
-                right := right < s.left + s.width ? s.left + s.width : right
-                top := s.top < top ? s.top : top
-                bottom := bottom < s.top + s.height ? s.top + s.height : bottom
-            }else{
-                left := s.left , right:= left + s.width 
-                top := s.top , bottom := top + s.height
-            }
-        }
-    }else{
-        for s, _ in sel.shapeRange {
-            if IsSet(left){
-                left := s.left < left ? s.left : left
-                right := right < s.left + s.width ? s.left + s.width : right
-                top := s.top < top ? s.top : top
-                bottom := bottom < s.top + s.height ? s.top + s.height : bottom
-            }else{
-                left := s.left , right:= left + s.width 
-                top := s.top , bottom := top + s.height
-            }
+    range := sel.HasChildShapeRange ? sel.ChildShapeRange : sel.shapeRange
+    for s, _ in range {
+        if IsSet(left){
+            left := s.left < left ? s.left : left
+            right := right < s.left + s.width ? s.left + s.width : right
+            top := s.top < top ? s.top : top
+            bottom := bottom < s.top + s.height ? s.top + s.height : bottom
+        }else{
+            left := s.left , right:= left + s.width 
+            top := s.top , bottom := top + s.height
         }
     }
     boxfunc(left, right, top, bottom)
@@ -209,6 +217,13 @@ getBoundfor(boxfunc){
 genShapeBefore(num){
     genShape(left, right, top, bottom){
         oppt.ActiveWindow.View.Slide.Shapes.AddShape(num, left-5, top-5, right - left +10, bottom - top + 10)
+        mso("ObjectBringToFront")
+    }
+    return genshape
+}
+genTextBoxBefore(){
+    genShape(left, right, top, bottom){
+        oppt.ActiveWindow.View.Slide.Shapes.AddTextBox(1, left-5, top-5, right - left +10, bottom - top + 10)
         mso("ObjectBringToFront")
     }
     return genshape
@@ -278,42 +293,20 @@ addConnFirstOther(&begin, &next){
 addConnSeq(&begin, &next){
     return addConn(&begin,&next,True)
 }
-Numpad2:: { ; 아래쪽 정렬
+^Numpad2:: { ; 아래쪽 정렬
     selectionType(,,multiShape2(_2() => mso("ObjectsAlignBottomSmart"), _22() => send("2")), _4() => send("2"))
 }
-Numpad4:: { ; 왼쪽 정렬
+^Numpad4:: { ; 왼쪽 정렬
     selectionType(,,multiShape2(_2() => mso("ObjectsAlignLeftSmart"), _22() => send("4")), _4() => send("4"))
 }
-Numpad5:: { ; 중앙 정렬
+^Numpad5:: { ; 중앙 정렬
     selectionType(,,multiShape2(_2() => getCenterBoundfor(centerAlign), _22() => send("5")), _4() => send("5"))
 }
-Numpad6:: { ; 오른쪽 정렬
+^Numpad6:: { ; 오른쪽 정렬
     selectionType(,,multiShape2(_2() => mso("ObjectsAlignRightSmart"), _22() => send("6")), _4() => send("6"))
 }
-Numpad8:: { ; 위쪽 정렬
+^Numpad8:: { ; 위쪽 정렬
     selectionType(,,multiShape2(_2() => mso("ObjectsAlignTopSmart"), _22() => send("8")), _4() => send("8"))
-}
-#Numpad0:: { ; 도형 타원
-    selectionType(_0() => mso("ShapeOval") ,_1()=> mso("ShapeOval")
-        ,_2() => getBoundfor(genShapeBefore(9)), _3() => getBoundfor(genShapeBefore(9)) )
-}
-#Numpad1:: { ; 텍스트 박스
-    mso("TextBoxInsertHorizontal")
-}
-#Numpad2:: { ; win NUM2 연결선 추가. 첫번째 에서 나머지로 
-    selectionType( _0() => mso("ShapeStraightConnectorArrow") , _1() => mso("ShapeStraightConnectorArrow")
-        ,forShape2(addConnFirstOther, _22() => mso("ShapeStraightConnectorArrow")), _3() => mso("ShapeStraightConnectorArrow"))
-}
-#NumpadDown:: { ; win Shift NUM2 연결선 추가. 시퀀셜
-    selectionType( _0() => mso("ShapeStraightConnectorArrow") , _1() => mso("ShapeStraightConnectorArrow")
-        ,forShape2(addConnSeq, _22() => mso("ShapeStraightConnectorArrow")), _3() => mso("ShapeStraightConnectorArrow"))
-}
-#Numpad3:: { ; 도형 삼각형
-    mso("ShapeIsoscelesTriangle")
-}
-#Numpad4:: { ; 도형 사각형 
-    selectionType(_0() => mso("ShapeRoundedRectangle") ,_1()=> mso("ShapeRoundedRectangle")
-        ,_2() => getBoundfor(genShapeBefore(5)), _3() => getBoundfor(genShapeBefore(5)) )
 }
 connArrowToggle(is_begin){
     f(&s) {
@@ -341,7 +334,7 @@ wordWrapToggle(&s){
     }
     return s.HasTextFrame
 }
-^Numpad1::{ ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
++Numpad1::{ ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
     selectionType(,,forShape(wordWrapToggle,), _3() => sel.ShapeRange.TextFrame.WordWrap := sel.ShapeRange.TextFrame.WordWrap = False)
 }
 shapeTextVerticalAlign(num){
@@ -352,13 +345,13 @@ shapeTextVerticalAlign(num){
     }
     return f
 }
-^Numpad2::{ ; 텍스트 아래 정렬
++Numpad2::{ ; 텍스트 아래 정렬
     selectionType(,,forShape(shapeTextVerticalAlign(4),),_3() => sel.ShapeRange.TextFrame.VerticalAnchor := 4)
 }
-^Numpad5::{ ; 텍스트 중앙 정렬
++Numpad5::{ ; 텍스트 중앙 정렬
     selectionType(,,forShape(shapeTextVerticalAlign(3),),_3() => sel.ShapeRange.TextFrame.VerticalAnchor := 3)
 }
-^Numpad8::{ ; 텍스트 위쪽 정렬
++Numpad8::{ ; 텍스트 위쪽 정렬
     selectionType(,,forShape(shapeTextVerticalAlign(1),),_3() => sel.ShapeRange.TextFrame.VerticalAnchor := 1)
 }
 connChange(&s){
@@ -372,27 +365,36 @@ connChange(&s){
 }
 fillout(&s){
     if(! s.connector){
+        if (s.fill.visible) and s.line.visible {
+            s.fill.visible := False
+        } else if s.fill.visible {
+            s.line.visible := True
+            s.fill.visible := True
+        } else{
+            s.fill.visible := True
+            s.line.visible := False
+        }
         s.fill.visible := s.fill.visible = False
     }
     return ! s.connector
 }
-NumpadDiv::{ ; 선 모양 변경 / ㄱ S  
+^NumpadDiv::{ ; 선 모양 변경 / ㄱ S  
     selectionType(,,forShape(connChange,),)
 }
-NumpadAdd:: {
+^NumpadAdd:: {
     selectionType(,,multiShape3(_2() => mso("AlignDistributeVertically"),_22() => false),)
 }
-NumpadSub:: {
+^NumpadSub:: {
     selectionType(,,multiShape3(_2() => mso("AlignDistributeHorizontally"),_22() => false),)
 }
-NumpadMult::{
+^NumpadMult::{
     selectionType(,,forShape(fillout,_22() => Send("*")),_3() => Send("*"))
 }
 dashToggle(&s){
     s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
     return true
 }
-\::{
+^\::{
     if_(is_shape, forShape(dashToggle),ThisHotkey)
     ;selectionType(,,forShape(dashToggle,_22() => Send(".")),_3() => Send("."))
 }
@@ -413,7 +415,7 @@ wheelup::{
 }
 wheelDown::{
     if_(is_shape, forShape(lineWidth(False)),"{WheelDown}")
-    selectionType(_0 => send("{WheelDown}"), _1 => send("{WheelDown}"), forShape(lineWidth(False),_22() => Send("{WheelDown}")), _3 => send("{WheelDown}"))
+    ;selectionType(_0 => send("{WheelDown}"), _1 => send("{WheelDown}"), forShape(lineWidth(False),_22() => Send("{WheelDown}")), _3 => send("{WheelDown}"))
 }
 
 MButton:: send "!hsfe" ; 도형 스포이드
