@@ -5,16 +5,111 @@
     RELOAD
 }
 
+
+
 #HotIf WinActive("ahk_class PPTFrameClass")
 setPPT(){
-    global oppt := ComObjActive("PowerPoint.Application")
-    global sel := oppt.ActiveWindow.selection
+    if not IsSet(oppt) {
+        global oppt := ComObjActive("PowerPoint.Application")
+    }
+    if not IsSet(sel) {
+        global sel := oppt.ActiveWindow.selection
+    }
 }
 
 ; 0 select none
 ; 1 select slide
 ; 2 select shapeRange
 ; 3 select textRange
+
+is_none() {
+    setPPT()
+    return sel.Type = 0
+}
+is_slide() {
+    setPPT()
+    return sel.Type = 1
+}
+is_shape() {
+    setPPT()
+    return sel.Type = 2
+}
+is_text() {
+    setPPT()
+    return sel.Type = 3
+}
+is_singleShape() {
+    setPPT()
+    if is_shape() {
+        return sel.HasChildShapeRange ? sel.ChildShapeRange.count = 1 : sel.shapeRange.count = 1
+    }else{
+        return False
+    }
+}
+is_multiShapeOverCnt(cnt) {
+    setPPT()
+    if is_shape() {
+        return sel.HasChildShapeRange ? sel.ChildShapeRange.count > cnt : sel.shapeRange.count > cnt
+    }else{
+        return False
+    }
+}
+is_multiShape(){
+    return is_multiShapeOverCnt(1)
+}
+is_multiShape2(){
+    return is_multiShapeOverCnt(2)
+
+}
+is_multiShape3(){
+    return is_multiShapeOverCnt(3)
+}
+for_shape(func) {
+    setPPT()
+    changed := false
+    range := sel.HasChildShapeRange ? sel.ChildShapeRange : sel.shapeRange
+    for s, _ in sel.ChildShapeRange {
+        changed := func(&s) or changed
+    }
+    return changed
+}
+for_shape2(func) {
+    setPPT()
+    changed := false
+    range := sel.HasChildShapeRange ? sel.ChildShapeRange : sel.shapeRange
+    for s, _ in range {
+        if isset(begin) {
+            changed := func(&begin, &s) or changed
+        } else {
+            begin := s
+        }
+    }
+    return changed
+}
+mso(str) {
+    oppt.CommandBars.ExecuteMso(str)
+}
+if_(exp, func, hotkey) {
+    exp() ? func() : send(hotkey)
+}
+a::if_(is_none,_() => mso("ShapeRoundedRectangle"), ThisHotkey)
+t::if_(is_none,_() => mso("TextBoxInsertHorizontal"), ThisHotkey)
+/::{
+    if is_none() {
+        mso("ShapeStraightConnectorArrow")
+    }else if is_multiShape() and for_shape2(addConnFirstOther) {
+    }else{
+        send(ThisHotkey)
+    }
+}
+^/::{
+    if is_none() {
+        mso("ShapeStraightConnectorArrow")
+    }else if is_multiShape() and for_shape2(addConnSeq) {
+    }else{
+        send(ThisHotkey)
+    }
+}
 
 selectionType(func_none ?, func_slide ?, func_shape ?, func_text ?) {
     setPPT()
@@ -27,10 +122,6 @@ selectionType(func_none ?, func_slide ?, func_shape ?, func_text ?) {
     }else if (sel.Type = 3) and IsSet(func_text){
         func_text()
     }
-}
-
-mso(str) {
-    oppt.CommandBars.ExecuteMso(str)
 }
 
 multiShape2(afunc, bfunc){
@@ -301,8 +392,9 @@ dashToggle(&s){
     s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
     return true
 }
-NumpadDot::{
-    selectionType(,,forShape(dashToggle,_22() => Send(".")),_3() => Send("."))
+\::{
+    if_(is_shape, forShape(dashToggle),ThisHotkey)
+    ;selectionType(,,forShape(dashToggle,_22() => Send(".")),_3() => Send("."))
 }
 lineWidth(up){
     f(&s){
@@ -316,10 +408,11 @@ lineWidth(up){
     return f
 }
 wheelup::{
-    selectionType(_0 => Send("{WheelUp}"), _1 => Send("{WheelUp}"), forShape(lineWidth(True), _22() => Send("{WheelUp}")), _3 => Send("{WheelUp}")
-)
+    if_(is_shape, forShape(lineWidth(True)),"{WheelUp}")
+    ;selectionType(_0 => Send("{WheelUp}"), _1 => Send("{WheelUp}"), forShape(lineWidth(True), _22() => Send("{WheelUp}")), _3 => Send("{WheelUp}")
 }
 wheelDown::{
+    if_(is_shape, forShape(lineWidth(False)),"{WheelDown}")
     selectionType(_0 => send("{WheelDown}"), _1 => send("{WheelDown}"), forShape(lineWidth(False),_22() => Send("{WheelDown}")), _3 => send("{WheelDown}"))
 }
 
@@ -362,3 +455,19 @@ else
 ;        ;sel.ShapeRange.Shadow.OffsetY :=3 
 ;    }
 ;}
+
+
+
+#HotIf 
+^r::{
+    send "^l^c"
+    ClipWait
+    htmlfile := ComObject("htmlfile")
+    htmlfile.write("<meta http-equiv='X-UA-Compatible' content='IE=edge'>")
+    JS := htmlfile.parentwindow
+    JS.eval("var dataVar = decodeURI('" . A_Clipboard . "')")
+    data := JS.dataVar
+    MsgBox "Copied URL: " . data
+    run "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe " . data
+
+}
