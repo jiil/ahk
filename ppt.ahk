@@ -67,27 +67,6 @@ t:: if_2(is_none, _1() => mso("TextBoxInsertHorizontal"), is_multiShape, _2() =>
 /:: if_2(is_none, _1() => mso("ShapeStraightConnectorArrow"), _2()=> is_multiShape() and for_shape2(addConnFirstOther), do_nothing, ThisHotkey)
 ^/:: if_2(is_none, _1() => mso("ShapeStraightConnectorArrow"), _2()=> is_multiShape() and for_shape2(addConnSeq), do_nothing, ThisHotkey)
 
-selectionType(func_none ?, func_slide ?, func_shape ?, func_text ?) {
-    setPPT()
-    if (sel.Type = 0) and IsSet(func_none) {
-        func_none()
-    }else if (sel.Type = 1) and IsSet(func_slide){
-        func_slide()
-    }else if (sel.Type = 2) and IsSet(func_shape){
-        func_shape()
-    }else if (sel.Type = 3) and IsSet(func_text){
-        func_text()
-    }
-}
-
-multiShape3(afunc, bfunc){
-    if is_multiShapeOver2(){
-        return afunc
-    }else if (IsSet(bfunc)) {
-        return bfunc
-    }
-}
-
 getCenterBoundfor(boxfunc){
     for s, _ in get_shapeRange(){
         if IsSet(left){
@@ -122,38 +101,20 @@ getBoundfor(boxfunc){
 
 genShapeBefore(num){
     genShape(left, right, top, bottom){
-        ComObjActive("PowerPoint.Application").ActiveWindow.View.Slide.Shapes.AddShape(num, left-5, top-5, right - left +10, bottom - top + 10)
+        get_ActiveWindow().View.Slide.Shapes.AddShape(num, left-5, top-5, right - left +10, bottom - top + 10)
         mso("ObjectBringToFront")
     }
     return genshape
 }
 genTextBoxBefore(){
     genShape(left, right, top, bottom){
-        ComObjActive("PowerPoint.Application").ActiveWindow.View.Slide.Shapes.AddTextBox(1, left-5, top-5, right - left +10, bottom - top + 10)
+        get_ActiveWindow().View.Slide.Shapes.AddTextBox(1, left-5, top-5, right - left +10, bottom - top + 10)
         mso("ObjectBringToFront")
     }
     return genshape
 }
-forShape(afunc, ufunc ?){
-    multi() {
-        changed := false
-        if(sel.HasChildShapeRange){
-            for s, _ in sel.ChildShapeRange{
-                changed := afunc(&s) or changed
-            } 
-        }else{
-            for s, _ in sel.shapeRange{
-                changed := afunc(&s) or changed
-            } 
-        }
-        if (! changed) and IsSet(ufunc){
-            ufunc()
-        }
-    }
-    return multi
-}
 addconn(&begin, &next){
-    ncf := ComObjActive("PowerPoint.Application").ActiveWindow.View.Slide.Shapes.AddConnector(1,0,0,5,5)
+    ncf := get_ActiveWindow().View.Slide.Shapes.AddConnector(1,0,0,5,5)
     ncf.ConnectorFormat.BeginConnect ConnectedShape := begin, ConnectionSite := 1
     ncf.ConnectorFormat.EndConnect ConnectedShape := next, ConnectionSite := 1
     ncf.line.EndArrowHeadStyle := 2
@@ -184,25 +145,15 @@ endArrowToggle(&s) => s.connector ?  s.line.EndArrowHeadStyle := Mod(s.line.EndA
 .:: if_(is_shape, _0 => for_Shape(endArrowToggle), ThisHotkey) ; 끝 화살표 토글
 wordWrapToggle(&s) => s.HasTextFrame ? s.TextFrame.WordWrap := s.TextFrame.WordWrap = False : do_nothing()
 
-NumpadEnd:: if_2(is_shape, _1() => for_Shape(wordWrapToggle), is_text, _2() => get_TextRange().WordWrap := get_TextRange().WordWrap = False, ThisHotkey) ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
+NumpadEnd:: if_2(is_shape, _1() => for_Shape(wordWrapToggle), is_text, _2() => wordWrapToggle(&_ :=get_ShapeRange()), ThisHotkey) ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
 
-shapeTextVerticalAlign(num){
-    f(&s){
-        if (s.hasTextFrame){
-            s.TextFrame.VerticalAnchor := num
-        }
-    }
-    return f
-}
-+Numpad2::{ ; 텍스트 아래 정렬
-    selectionType(,,forShape(shapeTextVerticalAlign(4),),_3() => sel.ShapeRange.TextFrame.VerticalAnchor := 4)
-}
-+Numpad5::{ ; 텍스트 중앙 정렬
-    selectionType(,,forShape(shapeTextVerticalAlign(3),),_3() => sel.ShapeRange.TextFrame.VerticalAnchor := 3)
-}
-+Numpad8::{ ; 텍스트 위쪽 정렬
-    selectionType(,,forShape(shapeTextVerticalAlign(1),),_3() => sel.ShapeRange.TextFrame.VerticalAnchor := 1)
-}
+shapeTextVerticalAlign(&s, num)=> s.hasTextFrame ? s.TextFrame.VerticalAnchor := num : do_nothing()
+shapeTextVerticalTop(&s) => shapeTextVerticalAlign(&s, 1) ; text align top
+shapeTextVerticalBottom(&s) => shapeTextVerticalAlign(&s, 4) ; text align bottom
+shapeTextVerticalCenter(&s) => shapeTextVerticalAlign(&s, 3) ; text align center
+NumpadDown:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalBottom), is_text, _2() => shapeTextVerticalBottom(&_ := get_shapeRange), ThisHotkey) ; 텍스트 아래 정렬
+NumpadUp:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalTop), is_text, _2() => shapeTextVerticalTop(&_ := get_shapeRange), ThisHotkey) ; 텍스트 중앙 정렬
+NumpadClear:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalCenter), is_text, _2() => shapeTextVerticalCenter(&_ := get_shapeRange), ThisHotkey) ; 텍스트 중앙 정렬
 connChange(&s){
     if (s.connector) {
         s.connectorFormat.Type := Mod(s.connectorFormat.Type , 3) + 1
@@ -226,42 +177,17 @@ fillToggle(&s){
     }
     return ! s.connector
 }
-^NumpadDiv::{ ; 선 모양 변경 / ㄱ S  
-    selectionType(,,forShape(connChange,),)
-}
-^NumpadAdd:: {
-    selectionType(,,multiShape3(_2() => mso("AlignDistributeVertically"),_22() => false),)
-}
-^NumpadSub:: {
-    selectionType(,,multiShape3(_2() => mso("AlignDistributeHorizontally"),_22() => false),)
-}
-^NumpadMult::{
-    selectionType(,,forShape(fillToggle,_22() => Send("*")),_3() => Send("*"))
-}
-dashToggle(&s){
-    s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
-    return true
-}
-^\::{
-    if_(is_shape, forShape(dashToggle),ThisHotkey)
-}
-lineWidth(up){
-    f(&s){
-        if (up) {
-            s.line.weight := s.line.weight + 0.25
-        } else {
-            s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0
-        }
-        return True
-    }
-    return f
-}
-wheelup::{
-    if_(is_shape, forShape(lineWidth(True)),"{WheelUp}")
-}
-wheelDown::{
-    if_(is_shape, forShape(lineWidth(False)),"{WheelDown}")
-}
+^NumpadDiv:: if_(is_shape, _1() => for_Shape(connChange), ThisHotkey) ; 선 모양 변경 / ㄱ S  
+^NumpadAdd:: if_(is_multiShapeOver2, _1() => mso("AlignDistributeVertically"), ThisHotkey) ; 수직 같은 간격 배치
+^NumpadSub:: if_(is_multiShapeOver2, _1() => mso("AlignDistributeHorizontally"), ThisHotkey) ; 수평 같은 간격 배치
+^NumpadMult:: if_(is_shape, _1() => for_Shape(fillToggle), ThisHotkey) ; 도형 채우기 토글
+
+dashToggle(&s) => s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
+^\:: if_(is_shape, _()=>for_Shape(dashToggle),ThisHotkey)
+lineWidthUp(&s) => s.line.weight := s.line.weight + 0.25 
+lineWidthDown(&s) => s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0
+wheelup:: if_(is_shape, _()=>for_Shape(lineWidthUp),"{WheelUp}")
+wheelDown:: if_(is_shape, _()=>for_Shape(lineWidthDown),"{WheelDown}")
 
 MButton:: send "!hsfe" ; 도형 스포이드
 +MButton:: send "!hsoe" ; 도형 아웃라인 스포이드
