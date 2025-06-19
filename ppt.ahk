@@ -20,17 +20,23 @@ setPPT(){
 ; 1 select slide
 ; 2 select shapeRange
 ; 3 select textRange
+get_activeWindow() => ComObjActive("PowerPoint.Application").ActiveWindow
+get_selection() => get_activeWindow().selection
 
-is_none() => ComObjActive("PowerPoint.Application").ActiveWindow.selection.Type = 0
-is_slide() => ComObjActive("PowerPoint.Application").ActiveWindow.selection.Type = 1
-is_shape() => ComObjActive("PowerPoint.Application").ActiveWindow.selection.Type = 2
-is_text() => ComObjActive("PowerPoint.Application").ActiveWindow.selection.Type = 3
-get_shapeRange() => ComObjActive("PowerPoint.Application").ActiveWindow.selection.HasChildShapeRange ?
-        ComObjActive("PowerPoint.Application").ActiveWindow.selection.ChildShapeRange
-        : ComObjActive("PowerPoint.Application").ActiveWindow.selection.shapeRange
-is_singleShape() => get_shapeRange().count = 1
-is_multiShape() => get_shapeRange().count > 1
-is_multiShapeOver2() => get_shapeRange().count > 2
+is_slide_active() => get_ActiveWindow().ActivePane.ViewType = 1
+is_none() => is_slide_active() and get_selection().Type = 0
+is_slide() => is_slide_active() and get_selection().Type = 1
+is_shape() => is_slide_active() and get_selection().Type = 2
+is_text() => is_slide_active() and  get_selection().Type = 3
+
+is_singleShape() => is_slide_active() and get_shapeRange().count = 1
+is_multiShape() => is_slide_active() and get_shapeRange().count > 1
+is_multiShapeOver2() => is_slide_active() and get_shapeRange().count > 2
+
+get_shapeRange() => get_selection().HasChildShapeRange ?  get_selection().ChildShapeRange : get_selection().shapeRange
+get_textRange() => get_selection().TextRange
+get_textRange2() => get_selection().TextRange2
+
 for_shape(func) {
     changed := false
     for s, _ in get_shapeRange() {
@@ -49,30 +55,17 @@ for_shape2(func) {
     }
     return changed
 }
-do_empty() {
+do_nothing() {
 }
 mso(str) => ComObjActive("PowerPoint.Application").CommandBars.ExecuteMso(str)
 if_(exp, func, hotkey) => exp() ? func() : send(hotkey)
 if_2(exp1, func1, exp2, func2, hotkey) => exp1() ? func1() : exp2() ? func2() : send(hotkey)
+
 a:: if_2(is_none, _1() => mso("ShapeRoundedRectangle"), is_multiShape, _2() => getBoundfor(genShapeBefore(5)), ThisHotkey)
 d:: if_2(is_none, _1() => mso("ShapeOval"), is_multiShape, _2() => getBoundfor(genShapeBefore(9)), ThisHotkey)
 t:: if_2(is_none, _1() => mso("TextBoxInsertHorizontal"), is_multiShape, _2() => getBoundfor(genTextBoxBefore()), ThisHotkey)
-/::{
-    if is_none() {
-        mso("ShapeStraightConnectorArrow")
-    }else if is_multiShape() and for_shape2(addConnFirstOther) {
-    }else{
-        send(ThisHotkey)
-    }
-}
-^/::{
-    if is_none() {
-        mso("ShapeStraightConnectorArrow")
-    }else if is_multiShape() and for_shape2(addConnSeq) {
-    }else{
-        send(ThisHotkey)
-    }
-}
+/:: if_2(is_none, _1() => mso("ShapeStraightConnectorArrow"), _2()=> is_multiShape() and for_shape2(addConnFirstOther), do_nothing, ThisHotkey)
+^/:: if_2(is_none, _1() => mso("ShapeStraightConnectorArrow"), _2()=> is_multiShape() and for_shape2(addConnSeq), do_nothing, ThisHotkey)
 
 selectionType(func_none ?, func_slide ?, func_shape ?, func_text ?) {
     setPPT()
@@ -84,14 +77,6 @@ selectionType(func_none ?, func_slide ?, func_shape ?, func_text ?) {
         func_shape()
     }else if (sel.Type = 3) and IsSet(func_text){
         func_text()
-    }
-}
-
-multiShape2(afunc, bfunc){
-    if is_multiShape(){
-        return afunc
-    }else if(IsSet(bfunc)) {
-        return bfunc
     }
 }
 
@@ -193,19 +178,14 @@ addConnSeq(&begin, &next) => flow(&begin,&next,True, addconn)
 ^Numpad6:: if_(is_multiShape, _1() => mso("ObjectsAlignRightSmart"), "^6") ; 오른쪽 정렬
 ^Numpad8:: if_(is_multiShape, _1() => mso("ObjectsAlignTopSmart"), "^8") ; 위쪽 정렬
 
-beginArrowToggle(&s) => s.connector ?  s.line.BeginArrowHeadStyle := Mod(s.line.BeginArrowHeadStyle , 2) + 1 : do_empty()
-endArrowToggle(&s) => s.connector ?  s.line.EndArrowHeadStyle := Mod(s.line.EndArrowHeadStyle , 2) + 1 : do_empty()
+beginArrowToggle(&s) => s.connector ?  s.line.BeginArrowHeadStyle := Mod(s.line.BeginArrowHeadStyle , 2) + 1 : do_nothing()
+endArrowToggle(&s) => s.connector ?  s.line.EndArrowHeadStyle := Mod(s.line.EndArrowHeadStyle , 2) + 1 : do_nothing()
 ,:: if_(is_shape, _0 => for_Shape(beginArrowToggle), ThisHotkey) ; 시작 화살표 토글
 .:: if_(is_shape, _0 => for_Shape(endArrowToggle), ThisHotkey) ; 끝 화살표 토글
-wordWrapToggle(&s){
-    if(s.HasTextFrame) {
-        s.TextFrame.WordWrap := s.TextFrame.WordWrap = False
-    }
-    return s.HasTextFrame
-}
-+Numpad1::{ ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
-    selectionType(,,forShape(wordWrapToggle,), _3() => sel.ShapeRange.TextFrame.WordWrap := sel.ShapeRange.TextFrame.WordWrap = False)
-}
+wordWrapToggle(&s) => s.HasTextFrame ? s.TextFrame.WordWrap := s.TextFrame.WordWrap = False : do_nothing()
+
+NumpadEnd:: if_2(is_shape, _1() => for_Shape(wordWrapToggle), is_text, _2() => get_TextRange().WordWrap := get_TextRange().WordWrap = False, ThisHotkey) ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
+
 shapeTextVerticalAlign(num){
     f(&s){
         if (s.hasTextFrame){
