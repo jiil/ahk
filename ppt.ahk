@@ -200,15 +200,25 @@ cellsBorder(&s, is_up) {
         r++
     }
     Loop rmax - rmin + 1 {
-        Loop cmax - cmin + 1 {
-            cell := s.Table.Cell(rmin + A_Index - 1, cmin + A_Index - 1)
-            if (is_up) {
-                cell.Borders.InsideLineStyle := 1
-                cell.Borders.OutsideLineStyle := 1
-            } else {
-                cell.Borders.InsideLineStyle := 0
-                cell.Borders.OutsideLineStyle := 0
-            }
+        leftCell := s.Table.Cell(rmin + A_Index - 1, cmin)
+        rightCell := s.Table.Cell(rmin + A_Index - 1, cmax)
+        if is_up {
+            leftCell.Borders.item(2).wight := leftCell.Borders.item(2).wight + 1
+            rightCell.Borders.item(4).wight := rightCell.Borders.item(4).wight + 1
+        } else {
+            leftCell.Borders.item(2).wight := leftCell.Borders.item(2).wight < 1 ? 0: leftCell.Borders.item(2).wight - 1
+            rightCell.Borders.item(4).wight := rightCell.Borders.item(4).wight < 1 ? 0: rightCell.Borders.item(4).wight + 1
+        }
+    }
+    loop cmax - cmin + 1 {
+        topCell := s.Table.Cell(rmin, cmin + A_Index - 1)
+        bottomCell := s.Table.Cell(rmax, cmin + A_Index - 1)
+        if is_up {
+            topCell.Borders.item(1).wight := topCell.Borders.item(1).wight + 1
+            bottomCell.Borders.item(3).wight := bottomCell.Borders.item(3).wight + 1
+        } else {
+            topCell.Borders.item(1).wight := topCell.Borders.item(1).wight < 1 ? 0: topCell.Borders.item(1).wight - 1
+            bottomCell.Borders.item(3).wight := bottomCell.Borders.item(3).wight < 1 ? 0: bottomCell.Borders.item(3).wight - 1
         }
     }
 }
