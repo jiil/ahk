@@ -177,10 +177,45 @@ fillToggle(&s){
 
 dashToggle(&s) => s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
 ^\:: if_(is_shape, _()=>for_Shape(dashToggle),ThisHotkey)
+cellsBorder(&s, is_up) {
+    r :=1
+    Loop s.Table.Rows.Count {
+        c := 1
+        Loop s.Table.Columns.Count {
+            if (s.Table.Cell(r,c).selected) {
+                if not IsSet(rmin) {
+                    rmin := r
+                    rmax := r
+                }
+                if not IsSet(cmin) {
+                    cmin := c
+                    cmax := c
+                }else {
+                    rmax := r > rmax ? r : rmax
+                    cmax := c > cmax ? c : cmax
+                }
+            }
+            c++
+        }
+        r++
+    }
+    Loop rmax - rmin + 1 {
+        Loop cmax - cmin + 1 {
+            cell := s.Table.Cell(rmin + A_Index - 1, cmin + A_Index - 1)
+            if (is_up) {
+                cell.Borders.InsideLineStyle := 1
+                cell.Borders.OutsideLineStyle := 1
+            } else {
+                cell.Borders.InsideLineStyle := 0
+                cell.Borders.OutsideLineStyle := 0
+            }
+        }
+    }
+}
 lineWidthUp(&s) => s.line.weight := s.line.weight + 0.25 
 lineWidthDown(&s) => s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0
-wheelup:: if_(is_shape, _()=>for_Shape(lineWidthUp),"{WheelUp}")
-wheelDown:: if_(is_shape, _()=>for_Shape(lineWidthDown),"{WheelDown}")
+wheelup:: if_2(is_shape, _()=>for_Shape(lineWidthUp),is_text, _1()=>get_textRange().font.size := get_textRange().font.size + 1,"{WheelUp}")
+wheelDown:: if_2(is_shape, _()=>for_Shape(lineWidthDown),is_text, _1()=>get_textRange().font.size := get_textRange().font.size - 1,"{WheelDown}")
 
 MButton:: send "!hsfe" ; 도형 스포이드
 +MButton:: send "!hsoe" ; 도형 아웃라인 스포이드
