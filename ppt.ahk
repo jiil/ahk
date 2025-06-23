@@ -142,9 +142,9 @@ shapeTextVerticalAlign(&s, num)=> s.hasTextFrame ? s.TextFrame.VerticalAnchor :=
 shapeTextVerticalTop(&s) => shapeTextVerticalAlign(&s, 1) ; text align top
 shapeTextVerticalBottom(&s) => shapeTextVerticalAlign(&s, 4) ; text align bottom
 shapeTextVerticalCenter(&s) => shapeTextVerticalAlign(&s, 3) ; text align center
-NumpadDown:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalBottom), is_text, _2() => shapeTextVerticalBottom(&_ := get_shapeRange), "2") ; 텍스트 아래 정렬
-NumpadUp:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalTop), is_text, _2() => shapeTextVerticalTop(&_ := get_shapeRange), "8") ; 텍스트 위 정렬
-NumpadClear:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalCenter), is_text, _2() => shapeTextVerticalCenter(&_ := get_shapeRange), "5") ; 텍스트 중앙 정렬
+NumpadDown:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalBottom), is_text, _2() => shapeTextVerticalBottom(&_ := get_shapeRange()), "2") ; 텍스트 아래 정렬
+NumpadUp:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalTop), is_text, _2() => shapeTextVerticalTop(&_ := get_shapeRange()), "8") ; 텍스트 위 정렬
+NumpadClear:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalCenter), is_text, _2() => shapeTextVerticalCenter(&_ := get_shapeRange()), "5") ; 텍스트 중앙 정렬
 connChange(&s){
     if (s.connector) {
         s.connectorFormat.Type := Mod(s.connectorFormat.Type , 3) + 1
@@ -203,27 +203,27 @@ cellsBorder(&s, is_up) {
         leftCell := s.Table.Cell(rmin + A_Index - 1, cmin)
         rightCell := s.Table.Cell(rmin + A_Index - 1, cmax)
         if is_up {
-            leftCell.Borders.item(2).wight := leftCell.Borders.item(2).wight + 1
-            rightCell.Borders.item(4).wight := rightCell.Borders.item(4).wight + 1
+            leftCell.Borders.item(2).weight := leftCell.Borders.item(2).weight + 1
+            rightCell.Borders.item(4).weight := rightCell.Borders.item(4).weight + 1
         } else {
-            leftCell.Borders.item(2).wight := leftCell.Borders.item(2).wight < 1 ? 0: leftCell.Borders.item(2).wight - 1
-            rightCell.Borders.item(4).wight := rightCell.Borders.item(4).wight < 1 ? 0: rightCell.Borders.item(4).wight + 1
+            leftCell.Borders.item(2).weight := leftCell.Borders.item(2).weight < 1 ? 0: leftCell.Borders.item(2).weight - 1
+            rightCell.Borders.item(4).weight := rightCell.Borders.item(4).weight < 1 ? 0: rightCell.Borders.item(4).weight - 1
         }
     }
     loop cmax - cmin + 1 {
         topCell := s.Table.Cell(rmin, cmin + A_Index - 1)
         bottomCell := s.Table.Cell(rmax, cmin + A_Index - 1)
         if is_up {
-            topCell.Borders.item(1).wight := topCell.Borders.item(1).wight + 1
-            bottomCell.Borders.item(3).wight := bottomCell.Borders.item(3).wight + 1
+            topCell.Borders.item(1).weight := topCell.Borders.item(1).weight + 1
+            bottomCell.Borders.item(3).weight := bottomCell.Borders.item(3).weight + 1
         } else {
-            topCell.Borders.item(1).wight := topCell.Borders.item(1).wight < 1 ? 0: topCell.Borders.item(1).wight - 1
-            bottomCell.Borders.item(3).wight := bottomCell.Borders.item(3).wight < 1 ? 0: bottomCell.Borders.item(3).wight - 1
+            topCell.Borders.item(1).weight := topCell.Borders.item(1).weight < 1 ? 0: topCell.Borders.item(1).weight - 1
+            bottomCell.Borders.item(3).weight := bottomCell.Borders.item(3).weight < 1 ? 0: bottomCell.Borders.item(3).weight - 1
         }
     }
 }
-lineWidthUp(&s) => s.line.weight := s.line.weight + 0.25 
-lineWidthDown(&s) => s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0
+lineWidthUp(&s) => s.hasTable ? cellsBorder(&s, true) : s.line.weight := s.line.weight + 0.25 
+lineWidthDown(&s) => s.hasTable ? cellsBorder(&s, false) : s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0
 wheelup:: if_2(is_shape, _()=>for_Shape(lineWidthUp),is_text, _1()=>get_textRange().font.size := get_textRange().font.size + 1,"{WheelUp}")
 wheelDown:: if_2(is_shape, _()=>for_Shape(lineWidthDown),is_text, _1()=>get_textRange().font.size := get_textRange().font.size - 1,"{WheelDown}")
 
