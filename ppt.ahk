@@ -19,6 +19,7 @@ is_slide() => is_slide_active() and get_selection().Type = 1
 is_shape() => is_slide_active() and get_selection().Type = 2
 is_text() => is_slide_active() and  get_selection().Type = 3
 is_connInclue() => is_shape() and for_shape(_(&s) => s.connector)
+is_table() => is_singleShape() and get_shapeRange().hasTable
 
 is_singleShape() => is_slide_active() and get_shapeRange().count = 1
 is_multiShape() => is_slide_active() and get_shapeRange().count > 1
@@ -139,12 +140,12 @@ wordWrapToggle(&s) => s.HasTextFrame ? s.TextFrame.WordWrap := s.TextFrame.WordW
 NumpadEnd:: if_2(is_shape, _1() => for_Shape(wordWrapToggle), is_text, _2() => wordWrapToggle(&_ :=get_ShapeRange()), "1") ; 도형의 텍스트 배치 토글 (도형이 글씨 영역을 제한할 때 사용)
 
 shapeTextVerticalAlign(&s, num)=> s.hasTextFrame ? s.TextFrame.VerticalAnchor := num : do_nothing()
-shapeTextVerticalTop(&s) => shapeTextVerticalAlign(&s, 1) ; text align top
-shapeTextVerticalBottom(&s) => shapeTextVerticalAlign(&s, 4) ; text align bottom
-shapeTextVerticalCenter(&s) => shapeTextVerticalAlign(&s, 3) ; text align center
+shapeTextVerticalTop(&s) => s.hasTable ? mso("TableCellAlignTop") : shapeTextVerticalAlign(&s, 1) ; text align top
+shapeTextVerticalBottom(&s) => s.hasTable ? mso("TableCellAlignBottom") : shapeTextVerticalAlign(&s, 4) ; text align bottom
+shapeTextVerticalCenter(&s) => s.hasTable ? mso("TableCellAlignCenterVertically") : shapeTextVerticalAlign(&s, 3) ; text align center
 NumpadDown:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalBottom), is_text, _2() => shapeTextVerticalBottom(&_ := get_shapeRange()), "2") ; 텍스트 아래 정렬
-NumpadUp:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalTop), is_text, _2() => shapeTextVerticalTop(&_ := get_shapeRange()), "8") ; 텍스트 위 정렬
 NumpadClear:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalCenter), is_text, _2() => shapeTextVerticalCenter(&_ := get_shapeRange()), "5") ; 텍스트 중앙 정렬
+NumpadUp:: if_2(is_shape, _1() => for_Shape(shapeTextVerticalTop), is_text, _2() => shapeTextVerticalTop(&_ := get_shapeRange()), "8") ; 텍스트 위 정렬
 connChange(&s){
     if (s.connector) {
         s.connectorFormat.Type := Mod(s.connectorFormat.Type , 3) + 1
@@ -171,12 +172,12 @@ fillToggle(&s){
     return ! s.connector
 }
 ^NumpadDiv:: if_(is_connInclue, _1() => for_Shape(connChange), "/") ; 선 모양 변경 / ㄱ S  
-^NumpadAdd:: if_(is_multiShapeOver2, _1() => mso("AlignDistributeVertically"), "+") ; 수직 같은 간격 배치
-^NumpadSub:: if_(is_multiShapeOver2, _1() => mso("AlignDistributeHorizontally"), "-") ; 수평 같은 간격 배치
-^NumpadMult:: if_(is_shape, _1() => for_Shape(fillToggle), "*") ; 도형 채우기 토글
+^NumpadAdd:: if_2(is_multiShapeOver2, _1() => mso("AlignDistributeVertically"), is_table, _2()=> mso("TableRowsDistribute") , "+") ; 수직 같은 간격 배치
+^NumpadSub:: if_2(is_multiShapeOver2, _1() => mso("AlignDistributeHorizontally"), is_table, _2()=> mso("TableColumnsDistribute") , "-") ; 수평 같은 간격 배치
+^NumpadMult:: if_2(is_shape, _1() => for_Shape(fillToggle), is_text, _2()=> fillToggle(&s := get_shapeRange()), "*") ; 도형 채우기 토글
 
 dashToggle(&s) => s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
-^\:: if_(is_shape, _()=>for_Shape(dashToggle),ThisHotkey)
+^\:: if_2(is_shape, _()=>for_Shape(dashToggle),is_text, _2()=> dashToggle(&s:= get_shapeRange()),ThisHotkey)
 cellsBorder(&s, is_up) {
     r :=1
     Loop s.Table.Rows.Count {
@@ -222,8 +223,8 @@ cellsBorder(&s, is_up) {
         }
     }
 }
-lineWidthUp(&s) => s.hasTable ? cellsBorder(&s, true) : s.line.weight := s.line.weight + 0.25 
-lineWidthDown(&s) => s.hasTable ? cellsBorder(&s, false) : s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0
+lineWidthUp(&s) => s.hasTable ? cellsBorder(&s, true) : s.line.visible ? s.line.weight := s.line.weight + 0.25 : s.line.visible := true
+lineWidthDown(&s) => s.hasTable ? cellsBorder(&s, false) : s.line.visible ? s.line.weight := s.line.weight > 0 ? s.line.weight - 0.25 : 0 : s.line.visible := true
 wheelup:: if_2(is_shape, _()=>for_Shape(lineWidthUp),is_text, _1()=>get_textRange().font.size := get_textRange().font.size + 1,"{WheelUp}")
 wheelDown:: if_2(is_shape, _()=>for_Shape(lineWidthDown),is_text, _1()=>get_textRange().font.size := get_textRange().font.size - 1,"{WheelDown}")
 
@@ -248,30 +249,4 @@ MButton:: send "!hsfe" ; 도형 스포이드
     }else {
         MsgBox (get_selection().Type)
     }
-}
-;if (sel.Type = 2)
-;{
-;    !s::
-;    {
-;        sel.ShapeRange.Shadow.Visible := sel.ShapeRange.Shadow.Visible = False
-;        ;sel.ShapeRange.Shadow.Blur := 10
-;        ;sel.ShapeRange.Shadow.OffsetX :=3 
-;        ;sel.ShapeRange.Shadow.OffsetY :=3 
-;    }
-;}
-
-
-
-#HotIf 
-^r::{
-    send "^l^c"
-    ClipWait
-    htmlfile := ComObject("htmlfile")
-    htmlfile.write("<meta http-equiv='X-UA-Compatible' content='IE=edge'>")
-    JS := htmlfile.parentwindow
-    JS.eval("var dataVar = decodeURI('" . A_Clipboard . "')")
-    data := JS.dataVar
-    MsgBox "Copied URL: " . data
-    run "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe " . data
-
 }
