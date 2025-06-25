@@ -176,6 +176,12 @@ fillToggle(&s){
 ^NumpadSub:: if_2(is_multiShapeOver2, _1() => mso("AlignDistributeHorizontally"), is_table, _2()=> mso("TableColumnsDistribute") , "-") ; 수평 같은 간격 배치
 ^NumpadMult:: if_2(is_shape, _1() => for_Shape(fillToggle), is_text, _2()=> fillToggle(&s := get_shapeRange()), "*") ; 도형 채우기 토글
 
+samesize(&begin, &next){
+    next.height := begin.height
+    next.width := begin.width
+}
+^NumpadEnter::if_(is_multiShape, _() => for_shape2(samesize),"{Enter}")
+
 dashToggle(&s) => s.line.DashStyle := Mod(s.line.DashStyle + 3,6)
 ^\:: if_2(is_shape, _()=>for_Shape(dashToggle),is_text, _2()=> dashToggle(&s:= get_shapeRange()),ThisHotkey)
 cellsBorder(&s, is_up) {
@@ -231,6 +237,8 @@ wheelDown:: if_2(is_shape, _()=>for_Shape(lineWidthDown),is_text, _1()=>get_text
 MButton:: send "!hsfe" ; 도형 스포이드
 +MButton:: send "!hsoe" ; 도형 아웃라인 스포이드
 ^MButton:: send "!hfce" ; 텍스트 스포이드 
+
+
 !o:: {
     if (is_none()) {
         MsgBox ("none")
