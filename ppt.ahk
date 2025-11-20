@@ -10,10 +10,18 @@
 ; 1 select slide
 ; 2 select shapeRange
 ; 3 select textRange
-get_activeWindow() => ComObjActive("PowerPoint.Application").ActiveWindow
+get_activeWindow() {
+    try {
+        return ComObjActive("PowerPoint.Application").ActiveWindow
+    }
+    return false
+}
 get_selection() => get_activeWindow().selection
 
-is_slide_active() => get_ActiveWindow().ActivePane.ViewType = 1
+is_slide_active() {
+    aw := get_activeWindow()
+    return aw && aw.ActivePane.ViewType = 1
+}
 is_none() => is_slide_active() and get_selection().Type = 0
 is_slide() => is_slide_active() and get_selection().Type = 1
 is_shape() => is_slide_active() and get_selection().Type = 2
